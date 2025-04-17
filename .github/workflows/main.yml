@@ -1,18 +1,15 @@
-name: Contribution Activity
+name: Regular Commit
 
 on:
-  # Run workflow according to a schedule
+  # Run every 5 minutes
   schedule:
-    # These cron expressions create an irregular pattern that mimics human activity
-    - cron: '10,25,47 9-17 * * 1-5'  # Workday hours, weekdays
-    - cron: '15,42 18-23 * * 1-5'    # Evening hours, weekdays
-    - cron: '12,35 8-23 * * 0,6'     # Weekend hours
+    - cron: '*/5 * * * *'
   
   # Allow manual triggering
   workflow_dispatch:
 
 jobs:
-  update-project:
+  make-commit:
     runs-on: ubuntu-latest
     
     steps:
@@ -20,7 +17,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          # Use your PAT for checkout
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       
       - name: Setup Git
@@ -28,92 +24,19 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
       
-      - name: Make project updates
+      - name: Make a commit
         run: |
-          # Generate a random number of commits (1-7) per workflow run
-          COMMITS_COUNT=$(( $RANDOM % 7 + 1 ))
+          # Current timestamp
+          TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
           
-          # Array of realistic commit messages
-          COMMIT_MESSAGES=(
-            "Update documentation"
-            "Fix typo in README"
-            "Add new project notes"
-            "Update project roadmap"
-            "Add research notes"
-            "Clean up formatting"
-            "Organize project files"
-            "Update progress tracker"
-            "Add meeting notes"
-            "Update task list"
-            "Add resource links"
-            "Revise project timeline"
-            "Update references"
-            "Refactor code structure"
-            "Improve documentation"
-            "Add example code"
-            "Update API documentation"
-            "Fix formatting issues"
-            "Add user guide"
-          )
+          # Update activity log file
+          echo "Activity update: $TIMESTAMP" >> activity_log.txt
           
-          # Files to modify
-          FILES=("README.md" "notes/ideas.md" "docs/roadmap.md" "progress.md" "resources.txt" "docs/guide.md")
-          
-          # Create directories if they don't exist
-          mkdir -p notes docs
-          
-          # Make sure all files exist
-          for FILE in "${FILES[@]}"; do
-            if [ ! -f "$FILE" ]; then
-              echo "# Project File" > "$FILE"
-            fi
-          done
-          
-          for ((i=1; i<=$COMMITS_COUNT; i++))
-          do
-            # Select a random file to modify
-            FILE_INDEX=$(( $RANDOM % ${#FILES[@]} ))
-            FILE_TO_MODIFY="${FILES[$FILE_INDEX]}"
-            
-            # Select a random commit message
-            MESSAGE_INDEX=$(( $RANDOM % ${#COMMIT_MESSAGES[@]} ))
-            COMMIT_MESSAGE="${COMMIT_MESSAGES[$MESSAGE_INDEX]}"
-            
-            # Current timestamp with some variability
-            TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
-            
-            # Update the file in different ways
-            if [ $(( $RANDOM % 3 )) -eq 0 ]; then
-              # Add content
-              echo "- Update ($TIMESTAMP): New project information" >> "$FILE_TO_MODIFY"
-            elif [ $(( $RANDOM % 3 )) -eq 1 ]; then
-              # Modify content - add a random prefix to each line
-              PREFIX="$(date +"%b %d") - "
-              if [ -f "$FILE_TO_MODIFY" ]; then
-                # Only modify if file exists and has content
-                if [ -s "$FILE_TO_MODIFY" ]; then
-                  sed -i "1s/^/$PREFIX/" "$FILE_TO_MODIFY"
-                else
-                  echo "$PREFIX Initial content" > "$FILE_TO_MODIFY"
-                fi
-              fi
-            else
-              # Replace content
-              echo "# Project Update ($TIMESTAMP)" > "$FILE_TO_MODIFY"
-              echo "- Latest progress notes" >> "$FILE_TO_MODIFY"
-              echo "- Updated resources" >> "$FILE_TO_MODIFY"
-            fi
-            
-            # Add and commit the changes
-            git add "$FILE_TO_MODIFY"
-            git commit -m "$COMMIT_MESSAGE"
-            
-            # Add a random delay between commits (0-30 seconds)
-            DELAY=$(( $RANDOM % 30 ))
-            sleep $DELAY
-          done
+          # Commit the change
+          git add activity_log.txt
+          git commit -m "Update activity: $TIMESTAMP"
       
-      # Push changes directly with git command using PAT
+      # Push changes with PAT
       - name: Push changes
         run: |
           git remote set-url origin https://${{ github.actor }}:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }}.git
