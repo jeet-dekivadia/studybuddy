@@ -1,0 +1,62 @@
+name: Auto Commit
+
+on:
+  # Run on push to repository
+  push:
+    branches: [ main ]
+  
+  # Run every 5 minutes (GitHub has limits on action frequency)
+  schedule:
+    - cron: '*/5 * * * *'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      - name: Create random commits
+        run: |
+          # Make several random commits within this single workflow run
+          # We do this because GitHub limits scheduled actions to run at most every 5 minutes
+          # This lets us generate multiple commits per workflow run
+          
+          # Number of commits to make per workflow run (12 commits x 5 min = ~1440 commits/day)
+          COMMITS_PER_RUN=12
+          
+          for ((i=1; i<=$COMMITS_PER_RUN; i++))
+          do
+            # Generate a random string
+            RANDOM_STRING=$(openssl rand -hex 8)
+            
+            # Current timestamp with seconds to ensure uniqueness
+            TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+            
+            # Create or update a file with random content
+            echo "$TIMESTAMP - $RANDOM_STRING" >> commit_history.txt
+            
+            # Add and commit the changes
+            git add commit_history.txt
+            git commit -m "Auto commit: $TIMESTAMP - $RANDOM_STRING"
+            
+            # Add a small delay between commits
+            sleep 1
+          done
+      
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
